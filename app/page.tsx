@@ -3,13 +3,14 @@
 import type React from "react"
 
 import { useState } from "react"
+import { signIn } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Heart, MessageCircle, Share2, Plus, Camera, MapPin, Calendar, Users, Grid3X3 } from "lucide-react"
@@ -86,6 +87,36 @@ const sampleMemories: Memory[] = [
 ]
 
 export default function LandingPage() {
+  const [modalOpen, setModalOpen] = useState(false)
+  const [tab, setTab] = useState<'login' | 'signup'>('login')
+  const [form, setForm] = useState({ email: '', password: '', name: '', confirm: '' })
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleAuth = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+    if (tab === 'signup' && form.password !== form.confirm) {
+      setError('Passwords do not match')
+      setLoading(false)
+      return
+    }
+    const res = await signIn('credentials', {
+      redirect: false,
+      email: form.email,
+      password: form.password,
+      name: tab === 'signup' ? form.name : undefined,
+      isSignUp: tab === 'signup',
+    })
+    setLoading(false)
+    if (res?.ok) {
+      window.location.href = '/feed'
+    } else {
+      setError(res?.error || 'Authentication failed')
+    }
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 via-white to-purple-50">
       {/* Hero Section */}
@@ -98,14 +129,89 @@ export default function LandingPage() {
             <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">Memories</h1>
           </div>
           <p className="text-lg text-gray-700 mb-6">Capture, organize, and share your special moments with friends. Relive your adventures, celebrations, and everyday joys—all in one beautiful app.</p>
-          <Link
-            href="/feed"
+          <Button
             className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-3 rounded-lg shadow transition"
+            onClick={() => setModalOpen(true)}
           >
             Get Started
-          </Link>
+          </Button>
         </div>
       </header>
+
+      {/* Login/Signup Modal */}
+      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{tab === 'login' ? 'Login to Memories' : 'Create an Account'}</DialogTitle>
+          </DialogHeader>
+          <div className="flex justify-center mb-4">
+            <button
+              className={`px-4 py-2 rounded-l ${tab === 'login' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}
+              onClick={() => setTab('login')}
+              disabled={tab === 'login'}
+            >
+              Login
+            </button>
+            <button
+              className={`px-4 py-2 rounded-r ${tab === 'signup' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}
+              onClick={() => setTab('signup')}
+              disabled={tab === 'signup'}
+            >
+              Sign Up
+            </button>
+          </div>
+          <form className="space-y-4" onSubmit={handleAuth}>
+            {tab === 'signup' && (
+              <div>
+                <Label htmlFor="name">Name</Label>
+                <Input
+                  id="name"
+                  type="text"
+                  value={form.name}
+                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                  required
+                />
+              </div>
+            )}
+            <div>
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={form.email}
+                onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                value={form.password}
+                onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                required
+              />
+            </div>
+            {tab === 'signup' && (
+              <div>
+                <Label htmlFor="confirm">Confirm Password</Label>
+                <Input
+                  id="confirm"
+                  type="password"
+                  value={form.confirm}
+                  onChange={e => setForm(f => ({ ...f, confirm: e.target.value }))}
+                  required
+                />
+              </div>
+            )}
+            {error && <div className="text-red-600 text-sm text-center">{error}</div>}
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? (tab === 'login' ? 'Logging in...' : 'Signing up...') : (tab === 'login' ? 'Login' : 'Sign Up')}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Features Section */}
       <main className="flex-1 flex flex-col items-center justify-center py-16 px-4">
