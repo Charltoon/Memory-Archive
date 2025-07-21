@@ -1,9 +1,4 @@
 {
-  "/not-found": "app/not-found.js",
-  "/feed/page": "app/feed/page.js",
-  "/gallery/page": "app/gallery/page.js",
-  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
-  "/api/memories/route": "app/api/memories/route.js",
-  "/api/memories/[id]/like/route": "app/api/memories/[id]/like/route.js",
-  "/page": "app/page.js"
+  "/page": "app/page.js",
+  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js"
 }

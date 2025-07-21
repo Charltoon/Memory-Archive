@@ -138,7 +138,7 @@ export default function LandingPage() {
             </span>
             <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">Memories</h1>
           </div>
-          <p className="text-lg text-gray-700 mb-6">Capture, organize, and share your special moments with friends. Relive your adventures, celebrations, and everyday joys—all in one beautiful app.</p>
+          <p className="text-lg text-gray-700 mb-6">Capture, organize, and share your special moments with friends. Relive your adventures, celebrations, and everyday joys—all in one beautiful site.</p>
           <Button
             className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-3 rounded-lg shadow transition"
             onClick={() => setModalOpen(true)}
