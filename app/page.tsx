@@ -85,337 +85,59 @@ const sampleMemories: Memory[] = [
   },
 ]
 
-export default function MemoryApp() {
-  const [memories, setMemories] = useState<Memory[]>(sampleMemories)
-  const [isAddingMemory, setIsAddingMemory] = useState(false)
-  const [newMemory, setNewMemory] = useState({
-    title: "",
-    description: "",
-    location: "",
-    category: "Adventure",
-    friends: "",
-  })
-
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
-
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      // Validate file type
-      if (!file.type.startsWith("image/")) {
-        alert("Please select an image file")
-        return
-      }
-
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        alert("File size must be less than 5MB")
-        return
-      }
-
-      setSelectedFile(file)
-
-      // Create preview URL
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        setImagePreview(e.target?.result as string)
-      }
-      reader.readAsDataURL(file)
-    }
-  }
-
-  const resetFileInput = () => {
-    setSelectedFile(null)
-    setImagePreview(null)
-  }
-
-  const handleAddMemory = () => {
-    if (!newMemory.title.trim()) {
-      alert("Please enter a title for your memory")
-      return
-    }
-
-    const memory: Memory = {
-      id: Date.now().toString(),
-      title: newMemory.title,
-      description: newMemory.description,
-      image: imagePreview || "/default-post.jpg",
-      date: new Date().toISOString().split("T")[0],
-      location: newMemory.location,
-      category: newMemory.category,
-      likes: 0,
-      comments: 0,
-      author: {
-        name: "You",
-        avatar: "/default-profile.jpg",
-      },
-      friends: newMemory.friends
-        .split(",")
-        .map((f) => f.trim())
-        .filter((f) => f),
-    }
-
-    setMemories([memory, ...memories])
-    setNewMemory({ title: "", description: "", location: "", category: "Adventure", friends: "" })
-    resetFileInput()
-    setIsAddingMemory(false)
-  }
-
-  const handleLike = (id: string) => {
-    setMemories(memories.map((memory) => (memory.id === id ? { ...memory, likes: memory.likes + 1 } : memory)))
-  }
-
-  const getCategoryColor = (category: string) => {
-    const colors = {
-      Adventure: "bg-green-100 text-green-800",
-      Celebration: "bg-purple-100 text-purple-800",
-      Travel: "bg-blue-100 text-blue-800",
-      Food: "bg-orange-100 text-orange-800",
-      Sports: "bg-red-100 text-red-800",
-    }
-    return colors[category as keyof typeof colors] || "bg-gray-100 text-gray-800"
-  }
-
+export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            {/* LEFT GROUP: App title and Gallery button */}
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <Camera className="h-8 w-8 text-blue-600" />
-                <h1 className="text-2xl font-bold text-gray-900">Memories</h1>
-              </div>
-              <Link href="/gallery">
-                <Button className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md shadow">
-                  <Grid3X3 className="h-4 w-4" />
-                  <span>Gallery</span>
-                </Button>
-              </Link>
-            </div>
-            {/* RIGHT GROUP: Add Memory button */}
-            <Button
-              onClick={() => setIsAddingMemory(true)}
-              className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md shadow"
-            >
-              <Plus className="h-4 w-4" />
-              <span>Add Memory</span>
-            </Button>
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      {/* Hero Section */}
+      <header className="w-full py-8 px-4 flex flex-col items-center bg-white/80 shadow-sm">
+        <div className="max-w-2xl text-center">
+          <div className="flex justify-center items-center mb-4">
+            <span className="inline-flex items-center justify-center bg-blue-600 text-white rounded-full w-14 h-14 mr-3">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A2 2 0 0020 6.382V5a2 2 0 00-2-2H6a2 2 0 00-2 2v1.382a2 2 0 00.447 1.342L9 10m6 0v10m0 0H9m6 0a2 2 0 002-2v-8m-2 10a2 2 0 01-2-2H9a2 2 0 01-2-2v-8m0 0L4.447 7.724A2 2 0 014 6.382V5" /></svg>
+            </span>
+            <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">Memories</h1>
           </div>
+          <p className="text-lg text-gray-700 mb-6">Capture, organize, and share your special moments with friends. Relive your adventures, celebrations, and everyday joys—all in one beautiful app.</p>
+          <Link
+            href="/feed"
+            className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-3 rounded-lg shadow transition"
+          >
+            Get Started
+          </Link>
         </div>
       </header>
 
-      {/* Add Memory Modal Dialog, rendered only when open */}
-      {isAddingMemory && (
-        <Dialog open={isAddingMemory} onOpenChange={setIsAddingMemory}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Create New Memory</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="title">Title</Label>
-                <Input
-                  id="title"
-                  placeholder="Give your memory a title..."
-                  value={newMemory.title}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewMemory({ ...newMemory, title: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Tell the story behind this memory..."
-                  value={newMemory.description}
-                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNewMemory({ ...newMemory, description: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="photo">Photo</Label>
-                <div className="space-y-3">
-                  <Input
-                    id="photo"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileSelect}
-                    className="cursor-pointer"
-                  />
-                  {imagePreview && (
-                    <div className="relative">
-                      <div className="relative aspect-video rounded-lg overflow-hidden border-2 border-dashed border-gray-300">
-                        <Image
-                          src={imagePreview || "/default-post.png"}
-                          alt="Preview"
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                      <Button
-                        type="button"
-                        onClick={resetFileInput}
-                        className="mt-2 bg-transparent"
-                      >
-                        Remove Photo
-                      </Button>
-                    </div>
-                  )}
-                  {!imagePreview && (
-                    <div className="aspect-video rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-500">
-                      <div className="text-center">
-                        <Camera className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                        <p className="text-sm">Select a photo to upload</p>
-                        <p className="text-xs text-gray-400">Max size: 5MB</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="location">Location</Label>
-                <Input
-                  id="location"
-                  placeholder="Where did this happen?"
-                  value={newMemory.location}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewMemory({ ...newMemory, location: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="category">Category</Label>
-                <Select
-                  value={newMemory.category}
-                  onValueChange={(value: string) => setNewMemory({ ...newMemory, category: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Adventure">Adventure</SelectItem>
-                    <SelectItem value="Celebration">Celebration</SelectItem>
-                    <SelectItem value="Travel">Travel</SelectItem>
-                    <SelectItem value="Food">Food</SelectItem>
-                    <SelectItem value="Sports">Sports</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="friends">Friends (comma separated)</Label>
-                <Input
-                  id="friends"
-                  placeholder="Who was with you?"
-                  value={newMemory.friends}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewMemory({ ...newMemory, friends: e.target.value })}
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button onClick={handleAddMemory} className="w-full" disabled={!newMemory.title.trim()}>
-                  Create Memory
-                </Button>
-                <Button
-                  type="button"
-                  className="w-full bg-gray-200 text-gray-700"
-                  onClick={() => {
-                    setIsAddingMemory(false);
-                    setNewMemory({ title: "", description: "", location: "", category: "Adventure", friends: "" });
-                    resetFileInput();
-                  }}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
-
-      {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 py-8">
-        <div className="space-y-8">
-          {memories.map((memory) => (
-            <Card key={memory.id} className="overflow-hidden">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <Avatar>
-                      <AvatarImage src={memory.author.avatar || "/default-profile.png"} />
-                      <AvatarFallback>{memory.author.name[0]}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="font-semibold text-gray-900">{memory.author.name}</p>
-                      <div className="flex items-center space-x-2 text-sm text-gray-500">
-                        <Calendar className="h-3 w-3" />
-                        <span>{new Date(memory.date).toLocaleDateString()}</span>
-                        {memory.location && (
-                          <>
-                            <span>•</span>
-                            <MapPin className="h-3 w-3" />
-                            <span>{memory.location}</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <Badge className={getCategoryColor(memory.category)}>{memory.category}</Badge>
-                </div>
-              </CardHeader>
-
-              <CardContent className="pt-0">
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">{memory.title}</h3>
-                    <p className="text-gray-700">{memory.description}</p>
-                  </div>
-
-                  <div className="relative aspect-video rounded-lg overflow-hidden">
-                    <Image src={memory.image || "/default-post.jpg"} alt={memory.title} fill className="object-cover" />
-                  </div>
-
-                  {memory.friends.length > 0 && (
-                    <div className="flex items-center space-x-2">
-                      <Users className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm text-gray-600">With {memory.friends.join(", ")}</span>
-                    </div>
-                  )}
-
-                  <div className="flex items-center justify-between pt-2 border-t">
-                    <div className="flex items-center space-x-4">
-                      <Button
-                        onClick={() => handleLike(memory.id)}
-                        className="flex items-center space-x-2 text-gray-600 hover:text-red-600"
-                      >
-                        <Heart className="h-4 w-4" />
-                        <span>{memory.likes}</span>
-                      </Button>
-                      <Button className="flex items-center space-x-2 text-gray-600">
-                        <MessageCircle className="h-4 w-4" />
-                        <span>{memory.comments}</span>
-                      </Button>
-                    </div>
-                    <Button className="text-gray-600">
-                      <Share2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {memories.length === 0 && (
-          <div className="text-center py-12">
-            <Camera className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No memories yet</h3>
-            <p className="text-gray-600 mb-4">Start capturing and sharing your special moments!</p>
-            <Button onClick={() => setIsAddingMemory(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Your First Memory
-            </Button>
+      {/* Features Section */}
+      <main className="flex-1 flex flex-col items-center justify-center py-16 px-4">
+        <div className="max-w-4xl w-full grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="bg-white rounded-lg shadow p-6 flex flex-col items-center text-center">
+            <span className="bg-blue-100 text-blue-600 rounded-full p-3 mb-3">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A2 2 0 0020 6.382V5a2 2 0 00-2-2H6a2 2 0 00-2 2v1.382a2 2 0 00.447 1.342L9 10m6 0v10m0 0H9m6 0a2 2 0 002-2v-8m-2 10a2 2 0 01-2-2H9a2 2 0 01-2-2v-8m0 0L4.447 7.724A2 2 0 014 6.382V5" /></svg>
+            </span>
+            <h3 className="font-bold text-lg mb-2">Capture Memories</h3>
+            <p className="text-gray-600">Easily add photos, stories, and locations to remember every special moment.</p>
           </div>
-        )}
+          <div className="bg-white rounded-lg shadow p-6 flex flex-col items-center text-center">
+            <span className="bg-purple-100 text-purple-600 rounded-full p-3 mb-3">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-3-3h-4a3 3 0 00-3 3v2h5zm-6 0v-2a3 3 0 00-3-3H4a3 3 0 00-3 3v2h5m6 0a3 3 0 01-3-3H4a3 3 0 01-3 3v2h5" /></svg>
+            </span>
+            <h3 className="font-bold text-lg mb-2">Share with Friends</h3>
+            <p className="text-gray-600">Tag friends and share your memories together. Comment and like each other's moments.</p>
+          </div>
+          <div className="bg-white rounded-lg shadow p-6 flex flex-col items-center text-center">
+            <span className="bg-green-100 text-green-600 rounded-full p-3 mb-3">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2a2 2 0 012-2h2a2 2 0 012 2v2m-6 0a2 2 0 002 2h2a2 2 0 002-2m-6 0V7a2 2 0 012-2h2a2 2 0 012 2v10" /></svg>
+            </span>
+            <h3 className="font-bold text-lg mb-2">Organize by Category</h3>
+            <p className="text-gray-600">Sort your memories by adventure, celebration, travel, food, sports, and more.</p>
+          </div>
+        </div>
       </main>
+
+      {/* Footer */}
+      <footer className="w-full py-6 text-center text-gray-500 text-sm bg-white/80 mt-auto">
+        &copy; {new Date().getFullYear()} Memories. All rights reserved.
+      </footer>
     </div>
   )
 }
