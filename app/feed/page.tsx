@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -15,7 +15,6 @@ import { Heart, MessageCircle, Share2, Plus, Camera, MapPin, Calendar, Users, Gr
 import Image from "next/image"
 import Link from "next/link"
 import { signOut, useSession } from "next-auth/react"
-import { useEffect } from "react"
 
 interface Memory {
   id: string
@@ -32,59 +31,8 @@ interface Memory {
     avatar: string
   }
   friends: string[]
+  liked: boolean
 }
-
-const sampleMemories: Memory[] = [
-  {
-    id: "1",
-    title: "Beach Day Adventure",
-    description:
-      "Perfect sunny day at the beach with the crew! Nothing beats good friends, good vibes, and endless laughter. 🏖️",
-    image: "/default-post.jpg",
-    date: "2024-01-15",
-    location: "Santa Monica Beach",
-    category: "Adventure",
-    likes: 24,
-    comments: 8,
-    author: {
-      name: "Alex Johnson",
-      avatar: "/default-profile.jpg",
-    },
-    friends: ["Sarah", "Mike", "Emma"],
-  },
-  {
-    id: "2",
-    title: "Birthday Celebration",
-    description: "Another year older, another year of amazing memories with these incredible people! 🎉",
-    image: "/default-post.jpg",
-    date: "2024-01-10",
-    location: "Downtown Restaurant",
-    category: "Celebration",
-    likes: 42,
-    comments: 15,
-    author: {
-      name: "Sarah Chen",
-      avatar: "/default-profile.jpg",
-    },
-    friends: ["Alex", "Mike", "Emma", "Jake"],
-  },
-  {
-    id: "3",
-    title: "Hiking Adventure",
-    description: "Conquered the mountain trail today! The view from the top was absolutely breathtaking. 🏔️",
-    image: "/default-post.jpg",
-    date: "2024-01-08",
-    location: "Rocky Mountain Trail",
-    category: "Adventure",
-    likes: 31,
-    comments: 12,
-    author: {
-      name: "Mike Rodriguez",
-      avatar: "/default-profile.jpg",
-    },
-    friends: ["Alex", "Sarah"],
-  },
-]
 
 export default function MemoryApp() {
   const { data: session, status } = useSession()
@@ -93,7 +41,10 @@ export default function MemoryApp() {
       window.location.href = "/"
     }
   }, [status])
-  const [memories, setMemories] = useState<Memory[]>(sampleMemories)
+  const [memories, setMemories] = useState<Memory[]>([])
+  const [loadingMemories, setLoadingMemories] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
   const [isAddingMemory, setIsAddingMemory] = useState(false)
   const [newMemory, setNewMemory] = useState({
     title: "",
@@ -106,6 +57,25 @@ export default function MemoryApp() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+
+  // Fetch memories from API
+  useEffect(() => {
+    async function fetchMemories() {
+      setLoadingMemories(true)
+      setError(null)
+      try {
+        const res = await fetch("/api/memories")
+        if (!res.ok) throw new Error("Failed to fetch memories")
+        const data = await res.json()
+        setMemories(data)
+      } catch (e: any) {
+        setError(e.message)
+      } finally {
+        setLoadingMemories(false)
+      }
+    }
+    fetchMemories()
+  }, [])
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -138,40 +108,54 @@ export default function MemoryApp() {
     setImagePreview(null)
   }
 
-  const handleAddMemory = () => {
+  const handleAddMemory = async () => {
     if (!newMemory.title.trim()) {
       alert("Please enter a title for your memory")
       return
     }
-
-    const memory: Memory = {
-      id: Date.now().toString(),
-      title: newMemory.title,
-      description: newMemory.description,
-      image: imagePreview || "/default-post.jpg",
-      date: new Date().toISOString().split("T")[0],
-      location: newMemory.location,
-      category: newMemory.category,
-      likes: 0,
-      comments: 0,
-      author: {
-        name: "You",
-        avatar: "/default-profile.jpg",
-      },
-      friends: newMemory.friends
-        .split(",")
-        .map((f) => f.trim())
-        .filter((f) => f),
+    try {
+      const res = await fetch("/api/memories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: newMemory.title,
+          description: newMemory.description,
+          image: imagePreview || "/default-post.jpg",
+          date: new Date().toISOString(),
+          location: newMemory.location,
+          category: newMemory.category,
+          friends: newMemory.friends
+            .split(",")
+            .map((f) => f.trim())
+            .filter((f) => f),
+        }),
+      })
+      if (!res.ok) throw new Error("Failed to add memory")
+      const memory = await res.json()
+      setMemories((prev) => [memory, ...prev])
+      setNewMemory({ title: "", description: "", location: "", category: "Adventure", friends: "" })
+      resetFileInput()
+      setIsAddingMemory(false)
+    } catch (e: any) {
+      alert(e.message)
     }
-
-    setMemories([memory, ...memories])
-    setNewMemory({ title: "", description: "", location: "", category: "Adventure", friends: "" })
-    resetFileInput()
-    setIsAddingMemory(false)
   }
 
-  const handleLike = (id: string) => {
-    setMemories(memories.map((memory) => (memory.id === id ? { ...memory, likes: memory.likes + 1 } : memory)))
+  const handleLike = async (id: string) => {
+    try {
+      const res = await fetch(`/api/memories/${id}/like`, { method: "POST" })
+      if (!res.ok) throw new Error("Failed to like memory")
+      const data = await res.json()
+      setMemories((prev) =>
+        prev.map((memory) =>
+          memory.id === id
+            ? { ...memory, likes: data.likeCount, liked: data.liked }
+            : memory
+        )
+      )
+    } catch (e: any) {
+      alert(e.message)
+    }
   }
 
   const getCategoryColor = (category: string) => {
@@ -196,14 +180,14 @@ export default function MemoryApp() {
             <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">Memories</h1>
           </div>
           {/* Center: Navigation */}
-          <nav className="hidden md:flex items-center gap-2">
+          {/* <nav className="hidden md:flex items-center gap-2">
             <Link href="/gallery">
               <Button className="flex items-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold px-4 py-2 rounded-lg shadow-none border border-blue-200">
                 <Grid3X3 className="h-4 w-4" />
                 <span>Gallery</span>
               </Button>
             </Link>
-          </nav>
+          </nav> */}
           {/* Right: Actions */}
           <div className="flex items-center gap-2 relative">
             <Button
@@ -387,7 +371,22 @@ export default function MemoryApp() {
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 py-8">
         <div className="space-y-8">
-          {memories.map((memory) => (
+          {loadingMemories ? (
+            <div className="text-center text-gray-500 py-12">Loading memories...</div>
+          ) : error ? (
+            <div className="text-center text-red-500 py-12">{error}</div>
+          ) : memories.length === 0 ? (
+            <div className="text-center py-12">
+              <Camera className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">No memories yet</h3>
+              <p className="text-gray-600 mb-4">Start capturing and sharing your special moments!</p>
+              <Button onClick={() => setIsAddingMemory(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Your First Memory
+              </Button>
+            </div>
+          ) : (
+            memories.map((memory) => (
             <Card key={memory.id} className="overflow-hidden">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
@@ -426,10 +425,10 @@ export default function MemoryApp() {
                     <Image src={memory.image || "/default-post.jpg"} alt={memory.title} fill className="object-cover" />
                   </div>
 
-                  {memory.friends.length > 0 && (
+                  {memory.friends && memory.friends.length > 0 && (
                     <div className="flex items-center space-x-2">
                       <Users className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm text-gray-600">With {memory.friends.join(", ")}</span>
+                      <span className="text-sm text-gray-600">With {memory.friends.map((f: any) => f.name).join(", ")}</span>
                     </div>
                   )}
 
@@ -440,11 +439,11 @@ export default function MemoryApp() {
                         className="flex items-center space-x-2 text-gray-600 hover:text-red-600"
                       >
                         <Heart className="h-4 w-4" />
-                        <span>{memory.likes}</span>
+                        <span>{Array.isArray(memory.likes) ? memory.likes.length : memory.likes}</span>
                       </Button>
                       <Button className="flex items-center space-x-2 text-gray-600">
                         <MessageCircle className="h-4 w-4" />
-                        <span>{memory.comments}</span>
+                        <span>{Array.isArray(memory.comments) ? memory.comments.length : memory.comments}</span>
                       </Button>
                     </div>
                     <Button className="text-gray-600">
@@ -454,20 +453,9 @@ export default function MemoryApp() {
                 </div>
               </CardContent>
             </Card>
-          ))}
+          ))
+          )}
         </div>
-
-        {memories.length === 0 && (
-          <div className="text-center py-12">
-            <Camera className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No memories yet</h3>
-            <p className="text-gray-600 mb-4">Start capturing and sharing your special moments!</p>
-            <Button onClick={() => setIsAddingMemory(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Your First Memory
-            </Button>
-          </div>
-        )}
       </main>
     </div>
   )
