@@ -11,9 +11,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Heart, MessageCircle, Share2, Plus, Camera, MapPin, Calendar, Users, Grid3X3 } from "lucide-react"
+import { Heart, MessageCircle, Share2, Plus, Camera, MapPin, Calendar, Users, Grid3X3, Menu, ChevronDown } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
+import { signOut, useSession } from "next-auth/react"
+import { useEffect } from "react"
 
 interface Memory {
   id: string
@@ -85,6 +87,12 @@ const sampleMemories: Memory[] = [
 ]
 
 export default function MemoryApp() {
+  const { data: session, status } = useSession()
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      window.location.href = "/"
+    }
+  }, [status])
   const [memories, setMemories] = useState<Memory[]>(sampleMemories)
   const [isAddingMemory, setIsAddingMemory] = useState(false)
   const [newMemory, setNewMemory] = useState({
@@ -97,6 +105,7 @@ export default function MemoryApp() {
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -179,30 +188,75 @@ export default function MemoryApp() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            {/* LEFT GROUP: App title and Gallery button */}
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <Camera className="h-8 w-8 text-blue-600" />
-                <h1 className="text-2xl font-bold text-gray-900">Memories</h1>
-              </div>
-              <Link href="/gallery">
-                <Button className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md shadow">
-                  <Grid3X3 className="h-4 w-4" />
-                  <span>Gallery</span>
-                </Button>
-              </Link>
-            </div>
-            {/* RIGHT GROUP: Add Memory button */}
+      <header className="bg-white/90 shadow-md border-b sticky top-0 z-20">
+        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+          {/* Left: Logo/Title */}
+          <div className="flex items-center gap-3">
+            <Camera className="h-8 w-8 text-blue-600" />
+            <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">Memories</h1>
+          </div>
+          {/* Center: Navigation */}
+          <nav className="hidden md:flex items-center gap-2">
+            <Link href="/gallery">
+              <Button className="flex items-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold px-4 py-2 rounded-lg shadow-none border border-blue-200">
+                <Grid3X3 className="h-4 w-4" />
+                <span>Gallery</span>
+              </Button>
+            </Link>
+          </nav>
+          {/* Right: Actions */}
+          <div className="flex items-center gap-2 relative">
             <Button
               onClick={() => setIsAddingMemory(true)}
-              className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md shadow"
+              className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold px-5 py-2 rounded-full shadow-md transition"
             >
-              <Plus className="h-4 w-4" />
-              <span>Add Memory</span>
+              <Plus className="h-5 w-5" />
+              <span className="hidden sm:inline">Add Memory</span>
             </Button>
+            {session?.user ? (
+              <div className="relative">
+                <button
+                  className="flex items-center gap-2 focus:outline-none"
+                  onClick={() => setUserMenuOpen((v) => !v)}
+                >
+                  <Avatar className="h-9 w-9">
+                    <AvatarImage src={session.user.image || "/default-profile.png"} />
+                    <AvatarFallback>{(session.user.name || session.user.email || "U")[0]}</AvatarFallback>
+                  </Avatar>
+                  <ChevronDown className="h-4 w-4 text-gray-500" />
+                </button>
+                {userMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-44 bg-white rounded-lg shadow-lg border z-50 animate-fade-in">
+                    <div className="px-4 py-2 text-gray-800 font-semibold border-b">{session.user.name || session.user.email}</div>
+                    <button
+                      className="w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-700"
+                      onClick={async () => {
+                        setUserMenuOpen(false)
+                        await signOut({ callbackUrl: "/" })
+                      }}
+                    >
+                      Logout
+                    </button>
+                    <button
+                      className="w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-700"
+                      onClick={() => {
+                        setUserMenuOpen(false)
+                        alert("Settings coming soon!")
+                      }}
+                    >
+                      Settings
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Button
+                onClick={() => (window.location.href = "/")}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+              >
+                Login
+              </Button>
+            )}
           </div>
         </div>
       </header>

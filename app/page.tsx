@@ -13,9 +13,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Heart, MessageCircle, Share2, Plus, Camera, MapPin, Calendar, Users, Grid3X3 } from "lucide-react"
+import { Heart, MessageCircle, Share2, Plus, Camera, MapPin, Calendar, Users, Grid3X3, Mail, Lock, User as UserIcon, Loader2, X } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
+import { useSession } from "next-auth/react"
+import { useEffect } from "react"
 
 interface Memory {
   id: string
@@ -87,6 +89,14 @@ const sampleMemories: Memory[] = [
 ]
 
 export default function LandingPage() {
+  const { data: session, status } = useSession()
+  // Redirect logged-in users to /feed
+  useEffect(() => {
+    if (status === "authenticated") {
+      window.location.href = "/feed"
+    }
+  }, [status])
+
   const [modalOpen, setModalOpen] = useState(false)
   const [tab, setTab] = useState<'login' | 'signup'>('login')
   const [form, setForm] = useState({ email: '', password: '', name: '', confirm: '' })
@@ -140,74 +150,97 @@ export default function LandingPage() {
 
       {/* Login/Signup Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>{tab === 'login' ? 'Login to Memories' : 'Create an Account'}</DialogTitle>
+        <DialogContent className="max-w-md p-0 bg-white border border-gray-200 rounded-xl shadow-sm animate-fade-in relative">
+          <button
+            type="button"
+            aria-label="Close"
+            onClick={() => setModalOpen(false)}
+            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 focus:outline-none"
+          >
+            <X className="h-5 w-5" />
+          </button>
+          <DialogHeader className="px-8 pt-8 pb-2">
+            <DialogTitle className="text-gray-900 text-2xl font-semibold text-center tracking-tight">
+              {tab === 'login' ? 'Sign In to Memories' : 'Create an Account'}
+            </DialogTitle>
           </DialogHeader>
-          <div className="flex justify-center mb-4">
+          <div className="flex justify-center mt-2 mb-6 border-b border-gray-200">
             <button
-              className={`px-4 py-2 rounded-l ${tab === 'login' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}
+              className={`flex-1 py-2 text-base font-medium border-b-2 transition-colors duration-200 ${tab === 'login' ? 'border-blue-600 text-blue-700' : 'border-transparent text-gray-500 hover:text-blue-600'}`}
               onClick={() => setTab('login')}
               disabled={tab === 'login'}
             >
-              Login
+              Sign In
             </button>
             <button
-              className={`px-4 py-2 rounded-r ${tab === 'signup' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}
+              className={`flex-1 py-2 text-base font-medium border-b-2 transition-colors duration-200 ${tab === 'signup' ? 'border-blue-600 text-blue-700' : 'border-transparent text-gray-500 hover:text-blue-600'}`}
               onClick={() => setTab('signup')}
               disabled={tab === 'signup'}
             >
               Sign Up
             </button>
           </div>
-          <form className="space-y-4" onSubmit={handleAuth}>
+          <form className="space-y-5 px-8 pb-8" onSubmit={handleAuth}>
             {tab === 'signup' && (
               <div>
-                <Label htmlFor="name">Name</Label>
+                <Label htmlFor="name" className="mb-1 text-gray-700 font-medium">Name</Label>
                 <Input
                   id="name"
                   type="text"
                   value={form.name}
                   onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                   required
+                  className="rounded-md border border-gray-300 focus:border-blue-600 focus:ring-0 text-base px-3 py-2 bg-white"
+                  placeholder="Your name"
                 />
               </div>
             )}
             <div>
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="mb-1 text-gray-700 font-medium">Email</Label>
               <Input
                 id="email"
                 type="email"
                 value={form.email}
                 onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
                 required
+                className="rounded-md border border-gray-300 focus:border-blue-600 focus:ring-0 text-base px-3 py-2 bg-white"
+                placeholder="you@email.com"
               />
             </div>
             <div>
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className="mb-1 text-gray-700 font-medium">Password</Label>
               <Input
                 id="password"
                 type="password"
                 value={form.password}
                 onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
                 required
+                className="rounded-md border border-gray-300 focus:border-blue-600 focus:ring-0 text-base px-3 py-2 bg-white"
+                placeholder="Password"
               />
             </div>
             {tab === 'signup' && (
               <div>
-                <Label htmlFor="confirm">Confirm Password</Label>
+                <Label htmlFor="confirm" className="mb-1 text-gray-700 font-medium">Confirm Password</Label>
                 <Input
                   id="confirm"
                   type="password"
                   value={form.confirm}
                   onChange={e => setForm(f => ({ ...f, confirm: e.target.value }))}
                   required
+                  className="rounded-md border border-gray-300 focus:border-blue-600 focus:ring-0 text-base px-3 py-2 bg-white"
+                  placeholder="Confirm password"
                 />
               </div>
             )}
-            {error && <div className="text-red-600 text-sm text-center">{error}</div>}
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? (tab === 'login' ? 'Logging in...' : 'Signing up...') : (tab === 'login' ? 'Login' : 'Sign Up')}
+            {error && (
+              <div className="bg-red-50 text-red-600 px-3 py-2 rounded text-sm text-center border border-red-200">
+                {error}
+              </div>
+            )}
+            <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-md transition-colors duration-200 text-base mt-2 flex items-center justify-center gap-2" disabled={loading}>
+              {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+              {loading ? (tab === 'login' ? 'Signing in...' : 'Signing up...') : (tab === 'login' ? 'Sign In' : 'Sign Up')}
             </Button>
           </form>
         </DialogContent>

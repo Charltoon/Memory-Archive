@@ -23,6 +23,8 @@ import {
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
+import { useSession } from "next-auth/react"
+import { useEffect } from "react"
 
 interface Memory {
   id: string
@@ -124,6 +126,13 @@ const sampleMemories: Memory[] = [
 ]
 
 export default function MemoryGallery() {
+  const { status } = useSession()
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      window.location.href = "/"
+    }
+  }, [status])
+
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [sortBy, setSortBy] = useState("date")
@@ -205,7 +214,7 @@ export default function MemoryGallery() {
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <Link href="/">
+              <Link href="/feed">
                 <Button>
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Back to Feed
