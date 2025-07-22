@@ -85,6 +85,7 @@ model Like {
   userId    String
   memory    Memory   @relation(fields: [memoryId], references: [id])
   memoryId  String
+  type      String   @default("like") // 'like', 'heart', 'haha', 'care', 'wow', 'sad', 'angry'
   createdAt DateTime @default(now())
 
   @@unique([userId, memoryId])

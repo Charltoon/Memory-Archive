@@ -126,20 +126,21 @@ const sampleMemories: Memory[] = [
 ]
 
 export default function MemoryGallery() {
-  const { status } = useSession()
+  const { data: session, status } = useSession();
   useEffect(() => {
     if (status === "unauthenticated") {
-      window.location.href = "/"
+      window.location.href = "/";
     }
-  }, [status])
+  }, [status]);
 
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [sortBy, setSortBy] = useState("date")
   const [viewMode, setViewMode] = useState("grid")
+  const [memories, setMemories] = useState(sampleMemories);
 
   const filteredAndSortedMemories = useMemo(() => {
-    const filtered = sampleMemories.filter((memory) => {
+    const filtered = memories.filter((memory) => {
       const matchesSearch =
         memory.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         memory.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -160,13 +161,13 @@ export default function MemoryGallery() {
           return 0
       }
     })
-  }, [searchTerm, selectedCategory, sortBy])
+  }, [searchTerm, selectedCategory, sortBy, memories])
 
   const stats = useMemo(() => {
-    const totalMemories = sampleMemories.length
-    const totalLikes = sampleMemories.reduce((sum, memory) => sum + memory.likes, 0)
-    const categories = Array.from(new Set(sampleMemories.map((m) => m.category)))
-    const locations = Array.from(new Set(sampleMemories.map((m) => m.location)))
+    const totalMemories = memories.length
+    const totalLikes = memories.reduce((sum, memory) => sum + memory.likes, 0)
+    const categories = Array.from(new Set(memories.map((m) => m.category)))
+    const locations = Array.from(new Set(memories.map((m) => m.location)))
 
     return {
       totalMemories,
@@ -176,7 +177,7 @@ export default function MemoryGallery() {
       categories,
       locations,
     }
-  }, [])
+  }, [memories])
 
   const getCategoryColor = (category: string) => {
     const colors = {
@@ -206,6 +207,12 @@ export default function MemoryGallery() {
       {} as Record<string, Memory[]>,
     )
   }
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this post?")) return;
+    await fetch(`/api/memories/${id}`, { method: "DELETE" });
+    setMemories((prev) => prev.filter((m) => m.id !== id));
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
@@ -384,6 +391,14 @@ export default function MemoryGallery() {
                           <Users className="h-3 w-3" />
                           <span>{memory.friends.length}</span>
                         </div>
+                        {session?.user?.name === memory.author.name && (
+                          <Button
+                            className="ml-2 bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
+                            onClick={() => handleDelete(memory.id)}
+                          >
+                            Delete
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </CardContent>

@@ -9,7 +9,7 @@ export async function GET() {
   const memories = await prisma.memory.findMany({
     include: {
       author: true,
-      likes: true,
+      likes: { include: { user: { select: { id: true, name: true } } } },
       comments: true,
       friends: true,
     },
