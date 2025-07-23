@@ -36,7 +36,7 @@ interface Memory {
 }
 
 // Add Cloudinary config at the top
-const CLOUDINARY_URL = 'https://api.cloudinary.com/v1_1/da2v8v1eh/image/upload'; // Replace with your actual cloud name
+const CLOUDINARY_URL = 'https://api.cloudinary.com/v1_1/dinfslhp6/image/upload'; // Replace with your actual cloud name
 const CLOUDINARY_PRESET = 'unsigned_preset';
 
 async function uploadToCloudinary(file: File) {
