@@ -5,17 +5,23 @@ import { PrismaClient } from "@prisma/client"
 
 const prisma = new PrismaClient()
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const session = await getServerSession(authOptions)
+  const userId = (session?.user as any)?.id
   const memories = await prisma.memory.findMany({
     include: {
       author: true,
-      likes: { include: { user: { select: { id: true, name: true } } } },
+      likes: { include: { user: { select: { id: true, name: true, image: true } } } },
       comments: true,
       friends: true,
     },
     orderBy: { createdAt: "desc" },
   })
-  return NextResponse.json(memories)
+  const memoriesWithLiked = memories.map(memory => ({
+    ...memory,
+    liked: userId ? memory.likes.some((like: any) => like.userId === userId) : false
+  }))
+  return NextResponse.json(memoriesWithLiked)
 }
 
 export async function POST(req: NextRequest) {

@@ -11,12 +11,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Heart, MessageCircle, Share2, Plus, Camera, MapPin, Calendar, Users, Grid3X3, Menu, ChevronDown, MoreVertical, ThumbsUp, Heart as HeartIcon } from "lucide-react"
+import { Heart, MessageCircle, Share2, Plus, Camera, MapPin, Calendar, Users, Grid3X3, Menu, ChevronDown, MoreVertical, Bookmark, X } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { signOut, useSession } from "next-auth/react"
-import ReactDOM from "react-dom";
-import { useRef } from "react";
 
 interface Memory {
   id: string
@@ -26,10 +24,9 @@ interface Memory {
   date: string
   location: string
   category: string
-  likes: any[] // now an array of like objects
+  likes: number
   comments: number
   author: {
-    id: string
     name: string
     avatar: string
   }
@@ -60,10 +57,11 @@ export default function MemoryApp() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const [popoverMemoryId, setPopoverMemoryId] = useState<string | null>(null);
-  const [popoverHover, setPopoverHover] = useState(false);
-  const popoverTimeout = useRef<NodeJS.Timeout | null>(null);
+  const [menuOpen, setMenuOpen] = useState<string | null>(null)
+  const [reactorsOpen, setReactorsOpen] = useState<string | null>(null)
+  const [selectedReactors, setSelectedReactors] = useState<any[]>([])
+  // Add state for delete confirmation
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string | null, open: boolean }>({ id: null, open: false })
 
   // Fetch memories from API
   useEffect(() => {
@@ -165,27 +163,25 @@ export default function MemoryApp() {
     }
   }
 
-  // New: handle reaction (like/heart)
-  const handleReact = async (id: string, type: "like" | "heart") => {
+  const performDelete = async (id: string) => {
     try {
-      const res = await fetch(`/api/memories/${id}/like`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type }),
-      });
-      if (!res.ok) throw new Error("Failed to react");
-      const data = await res.json();
-      setMemories((prev) =>
-        prev.map((memory) =>
-          memory.id === id
-            ? { ...memory, likes: data.reactors }
-            : memory
-        )
-      );
+      const res = await fetch(`/api/memories/${id}`, { method: "DELETE" })
+      if (!res.ok) throw new Error("Failed to delete memory")
+      setMemories((prev) => prev.filter((m) => m.id !== id))
+      setMenuOpen(null)
+      setDeleteConfirm({ id: null, open: false })
     } catch (e: any) {
-      alert(e.message);
+      alert(e.message)
     }
-  };
+  }
+
+  useEffect(() => {
+    const closeMenu = (e: MouseEvent) => {
+      if (!(e.target as HTMLElement).closest('.relative')) setMenuOpen(null)
+    }
+    window.addEventListener("click", closeMenu)
+    return () => window.removeEventListener("click", closeMenu)
+  }, [])
 
   const getCategoryColor = (category: string) => {
     const colors = {
@@ -196,255 +192,6 @@ export default function MemoryApp() {
       Sports: "bg-red-100 text-red-800",
     }
     return colors[category as keyof typeof colors] || "bg-gray-100 text-gray-800"
-  }
-
-  // PortalTooltip component
-  function PortalTooltip({ show, anchorRef, children }: { show: boolean, anchorRef: any, children: React.ReactNode }) {
-    const [coords, setCoords] = useState<{ left: number; top: number } | null>(null);
-    useEffect(() => {
-      if (show && anchorRef.current) {
-        const rect = anchorRef.current.getBoundingClientRect();
-        setCoords({ left: rect.left + rect.width / 2, top: rect.top });
-      } else {
-        setCoords(null);
-      }
-    }, [show, anchorRef]);
-    if (!show || !coords) return null;
-    return ReactDOM.createPortal(
-      <div style={{
-        position: 'fixed',
-        left: Math.max(8, coords.left),
-        top: Math.max(8, coords.top - 40),
-        zIndex: 9999,
-        transform: 'translateX(-50%)',
-        pointerEvents: 'none',
-      }}>
-        <div className="bg-gray-900 text-white text-xs rounded px-3 py-1 whitespace-nowrap shadow-lg pointer-events-auto">
-          {children}
-        </div>
-        <div className="w-2 h-2 bg-gray-900 rotate-45 mx-auto mt-[-4px]"></div>
-      </div>,
-      document.body
-    );
-  }
-
-  // ReactionBar component for Facebook-style reactions
-  interface ReactionBarProps {
-    memory: any;
-    session: any;
-    onReact: (id: string, type: "like" | "heart") => void;
-    popoverMemoryId: string | null;
-    setPopoverMemoryId: (id: string | null) => void;
-  }
-  // Reaction image map
-  const REACTION_IMAGES: Record<string, string> = {
-    like: '/Like.png',
-    heart: '/Heart.png',
-    haha: '/Haha.png',
-    care: '/Care.png',
-    wow: '/Wow.png',
-    sad: '/Sad.png',
-    angry: '/Angry.png',
-  };
-  const REACTION_LABELS: Record<string, string> = {
-    like: 'Like',
-    heart: 'Love',
-    haha: 'Haha',
-    care: 'Care',
-    wow: 'Wow',
-    sad: 'Sad',
-    angry: 'Angry',
-  };
-  const REACTION_TYPES = ['like', 'heart', 'haha', 'care', 'wow', 'sad', 'angry'];
-  function ReactionBar({ memory, session, onReact, popoverMemoryId, setPopoverMemoryId }: ReactionBarProps) {
-    // Group reactors by type
-    const reactorsByType: Record<string, any[]> = {};
-    REACTION_TYPES.forEach(type => {
-      reactorsByType[type] = memory.likes?.filter((l: any) => l.type === type) || [];
-    });
-    const totalCount = memory.likes?.length || 0;
-    const userReaction = memory.likes?.find((l: any) => l.user?.id === (session?.user as any)?.id)?.type;
-
-    // Helper to format names for tooltip
-    const formatNames = (arr: any[]) => {
-      if (arr.length === 0) return '';
-      if (arr.length === 1) return arr[0].user?.name || 'Unknown';
-      if (arr.length === 2) return `${arr[0].user?.name}, ${arr[1].user?.name}`;
-      return `${arr[0].user?.name}, ${arr[1].user?.name} and ${arr.length - 2} more`;
-    };
-
-    const likeRef = useRef(null);
-    const heartRef = useRef(null);
-    const [showLikeTooltip, setShowLikeTooltip] = useState(false);
-    const [showHeartTooltip, setShowHeartTooltip] = useState(false);
-
-    // Add a ref for the Like button container
-    const likeButtonRef = useRef<HTMLDivElement>(null);
-    const [showReactionPopover, setShowReactionPopover] = useState(false);
-    const [reactionPopoverCoords, setReactionPopoverCoords] = useState<{ left: number; top: number } | null>(null);
-
-    return (
-      <div className="border-t pt-0">
-        <div className="flex items-center justify-between px-2 py-1">
-          {/* Inline reaction icons and count */}
-          <div className="flex items-center gap-1 relative">
-            {REACTION_TYPES.map((type, idx) =>
-              reactorsByType[type].length > 0 && (
-                <div
-                  key={type}
-                  className="relative"
-                  ref={type === 'like' ? likeRef : type === 'heart' ? heartRef : undefined}
-                  onMouseEnter={() => {
-                    if (type === 'like') setShowLikeTooltip(true);
-                    if (type === 'heart') setShowHeartTooltip(true);
-                  }}
-                  onMouseLeave={() => {
-                    if (type === 'like') setShowLikeTooltip(false);
-                    if (type === 'heart') setShowHeartTooltip(false);
-                  }}
-                  onTouchStart={() => {
-                    if (type === 'like') setShowLikeTooltip(v => !v);
-                    if (type === 'heart') setShowHeartTooltip(v => !v);
-                  }}
-                  style={{ zIndex: 7 - idx }}
-                >
-                  <img
-                    src={REACTION_IMAGES[type]}
-                    alt={REACTION_LABELS[type]}
-                    className={`w-8 h-8 rounded-full border-2 border-white shadow-sm -ml-3 first:ml-0 bg-white object-contain`}
-                    draggable={false}
-                  />
-                  {type === 'like' && (
-                    <PortalTooltip show={showLikeTooltip} anchorRef={likeRef}>
-                      {formatNames(reactorsByType[type])}
-                    </PortalTooltip>
-                  )}
-                  {type === 'heart' && (
-                    <PortalTooltip show={showHeartTooltip} anchorRef={heartRef}>
-                      {formatNames(reactorsByType[type])}
-                    </PortalTooltip>
-                  )}
-                </div>
-              )
-            )}
-            {totalCount > 0 && (
-              <span className="ml-1 text-xs text-gray-600 font-medium select-none">{totalCount}</span>
-            )}
-          </div>
-        </div>
-        <div className="flex items-center divide-x divide-gray-200 border-t">
-          {/* Like Button with Reaction Popover */}
-          <div className="flex-1 flex justify-center">
-            <div
-              className="relative w-full flex justify-center"
-              ref={likeButtonRef}
-              onMouseEnter={() => {
-                if (popoverTimeout.current) clearTimeout(popoverTimeout.current);
-                setPopoverMemoryId(memory.id);
-                if (likeButtonRef.current) {
-                  const rect = likeButtonRef.current.getBoundingClientRect();
-                  setReactionPopoverCoords({ left: rect.left + rect.width / 2, top: rect.top });
-                }
-                setShowReactionPopover(true);
-              }}
-              onMouseLeave={() => {
-                popoverTimeout.current = setTimeout(() => {
-                  if (!popoverHover) {
-                    setPopoverMemoryId(null);
-                    setShowReactionPopover(false);
-                  }
-                }, 120);
-              }}
-              onTouchStart={() => {
-                if (popoverMemoryId === memory.id) {
-                  setPopoverMemoryId(null);
-                  setShowReactionPopover(false);
-                } else {
-                  setPopoverMemoryId(memory.id);
-                  if (likeButtonRef.current) {
-                    const rect = likeButtonRef.current.getBoundingClientRect();
-                    setReactionPopoverCoords({ left: rect.left + rect.width / 2, top: rect.top });
-                  }
-                  setShowReactionPopover(true);
-                }
-              }}
-            >
-              <button
-                className={`w-full flex items-center justify-center gap-2 py-2 transition font-medium bg-transparent hover:bg-gray-100 rounded-none ${userReaction ? (userReaction === 'like' ? 'text-blue-600' : userReaction === 'heart' ? 'text-pink-600' : 'text-yellow-600') : 'text-gray-600'}`}
-                aria-label="React"
-                onClick={() => {
-                  if (userReaction) {
-                    // Undo the reaction
-                    onReact(memory.id, userReaction);
-                  } else {
-                    // Default to like
-                    onReact(memory.id, 'like');
-                  }
-                }}
-              >
-                {userReaction ? (
-                  <img src={REACTION_IMAGES[userReaction]} alt={REACTION_LABELS[userReaction]} className="w-7 h-7 object-contain" />
-                ) : (
-                  <img src={REACTION_IMAGES['like']} alt="Like" className="w-7 h-7 object-contain" />
-                )}
-                <span className="text-sm font-semibold">{REACTION_LABELS[userReaction || 'like']}</span>
-              </button>
-              {/* Portal-based reaction popover */}
-              {popoverMemoryId === memory.id && showReactionPopover && reactionPopoverCoords &&
-                ReactDOM.createPortal(
-                  <div
-                    onMouseEnter={() => {
-                      if (popoverTimeout.current) clearTimeout(popoverTimeout.current);
-                      setPopoverHover(true);
-                    }}
-                    onMouseLeave={() => {
-                      setPopoverHover(false);
-                      popoverTimeout.current = setTimeout(() => {
-                        setPopoverMemoryId(null);
-                        setShowReactionPopover(false);
-                      }, 120);
-                    }}
-                    style={{
-                      position: 'fixed',
-                      left: Math.max(8, reactionPopoverCoords.left),
-                      top: Math.max(8, reactionPopoverCoords.top - 120),
-                      zIndex: 9999,
-                      transform: 'translateX(-50%)',
-                      pointerEvents: 'auto',
-                    }}
-                  >
-                    <div className="flex gap-5 bg-white border rounded-full shadow-lg px-6 py-4 animate-fade-in">
-                      {REACTION_TYPES.map(type => (
-                        <button
-                          key={type}
-                          className="hover:scale-125 focus:scale-125 transition-transform rounded-full p-1"
-                          style={{ width: 72, height: 72 }}
-                          onClick={() => { setPopoverMemoryId(null); setShowReactionPopover(false); onReact(memory.id, type as any); }}
-                          aria-label={REACTION_LABELS[type]}
-                        >
-                          <img src={REACTION_IMAGES[type]} alt={REACTION_LABELS[type]} className="w-16 h-16 object-contain" />
-                        </button>
-                      ))}
-                    </div>
-                  </div>,
-                  document.body
-                )
-              }
-            </div>
-          </div>
-          {/* Comment Button */}
-          <button className="flex-1 flex items-center justify-center gap-2 py-2 text-gray-600 hover:bg-gray-100 text-sm font-medium">
-            <MessageCircle className="h-5 w-5" />
-            <span>Comment</span>
-          </button>
-          {/* Share Button */}
-          <button className="flex-1 flex items-center justify-center gap-2 py-2 text-gray-600 hover:bg-gray-100 text-sm font-medium">
-            <Share2 className="h-5 w-5" />
-            <span>Share</span>
-          </button>
-        </div>
-      </div>
-    );
   }
 
   return (
@@ -526,7 +273,7 @@ export default function MemoryApp() {
       {/* Add Memory Modal Dialog, rendered only when open */}
       {isAddingMemory && (
         <Dialog open={isAddingMemory} onOpenChange={setIsAddingMemory}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="w-full max-w-sm sm:max-w-md max-h-[90vh] overflow-y-auto rounded-lg p-4">
             <DialogHeader>
               <DialogTitle>Create New Memory</DialogTitle>
             </DialogHeader>
@@ -668,51 +415,27 @@ export default function MemoryApp() {
             <Card key={memory.id} className="overflow-hidden">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between gap-2">
-                  {/* Left: Avatar, Name, Date, Location */}
                   <div className="flex items-center gap-3 min-w-0">
-                    <Avatar>
+                    <Avatar className="h-9 w-9 min-w-[2.25rem]">
                       <AvatarImage src={memory.author.avatar || "/default-profile.jpg"} />
                       <AvatarFallback>{memory.author.name[0]}</AvatarFallback>
                     </Avatar>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-gray-900 truncate max-w-[120px]">{memory.author.name}</span>
-                        <span className="text-gray-400">•</span>
-                        <span className="text-sm text-gray-500 whitespace-nowrap">{new Date(memory.date).toLocaleDateString()}</span>
-                        {memory.location && (
-                          <>
-                            <span className="text-gray-400">•</span>
-                            <span className="flex items-center gap-1 text-sm text-gray-500 whitespace-nowrap">
-                              <MapPin className="h-3 w-3" />
-                              {memory.location}
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    </div>
+                    <span className="font-semibold text-gray-900 truncate text-base sm:text-lg">{memory.author.name}</span>
                   </div>
-                  {/* Right: Category badge and settings */}
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <Badge className={getCategoryColor(memory.category)}>{memory.category}</Badge>
-                    {session?.user && (session.user as any).id === memory.author.id && (
+                  <div className="flex items-center gap-2">
+                    {session?.user?.name === memory.author.name && (
                       <div className="relative">
                         <button
-                          className="ml-1 p-2 rounded-full hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                          aria-label="Post options"
-                          onClick={() => setOpenMenuId(openMenuId === memory.id ? null : memory.id)}
+                          className="p-2 rounded-full hover:bg-gray-100 focus:outline-none"
+                          onClick={e => { e.stopPropagation(); setMenuOpen(memory.id); }}
                         >
                           <MoreVertical className="h-5 w-5 text-gray-500" />
                         </button>
-                        {openMenuId === memory.id && (
-                          <div className="absolute right-0 mt-2 w-32 bg-white border border-gray-200 rounded shadow-lg z-10 animate-fade-in">
+                        {menuOpen === memory.id && (
+                          <div className="absolute right-0 mt-2 w-32 bg-white rounded-lg shadow-lg border z-50 animate-fade-in">
                             <button
-                              className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 rounded"
-                              onClick={async () => {
-                                setOpenMenuId(null);
-                                if (!confirm("Are you sure you want to delete this post?")) return;
-                                await fetch(`/api/memories/${memory.id}`, { method: "DELETE" });
-                                setMemories((prev) => prev.filter((m) => m.id !== memory.id));
-                              }}
+                              className="w-full text-left px-4 py-2 hover:bg-red-50 text-red-600"
+                              onClick={e => { e.stopPropagation(); setDeleteConfirm({ id: memory.id, open: true }); setMenuOpen(null); }}
                             >
                               Delete
                             </button>
@@ -721,6 +444,20 @@ export default function MemoryApp() {
                       </div>
                     )}
                   </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-gray-500">
+                  <div className="flex items-center gap-1">
+                    <Calendar className="h-3 w-3" />
+                    <span>{new Date(memory.date).toLocaleDateString()}</span>
+                  </div>
+                  {memory.location && (
+                    <div className="flex items-center gap-1">
+                      <span>•</span>
+                      <MapPin className="h-3 w-3" />
+                      <span className="truncate max-w-[8rem] sm:max-w-xs">{memory.location}</span>
+                    </div>
+                  )}
+                  <Badge className={getCategoryColor(memory.category)}>{memory.category}</Badge>
                 </div>
               </CardHeader>
 
@@ -742,14 +479,41 @@ export default function MemoryApp() {
                     </div>
                   )}
 
-                  {/* Reaction Bar */}
-                  <ReactionBar
-                    memory={memory}
-                    session={session}
-                    onReact={handleReact}
-                    popoverMemoryId={popoverMemoryId}
-                    setPopoverMemoryId={setPopoverMemoryId}
-                  />
+                  <div className="pt-2 border-t border-gray-200">
+                    <div className="flex items-center space-x-4 mb-1">
+                      <button
+                        onClick={() => handleLike(memory.id)}
+                        className="focus:outline-none"
+                      >
+                        {memory.liked ? (
+                          <Heart className="h-6 w-6 text-red-600 fill-red-600" />
+                        ) : (
+                          <Heart className="h-6 w-6 text-gray-900 stroke-2" />
+                        )}
+                      </button>
+                      <button className="focus:outline-none">
+                        <MessageCircle className="h-6 w-6 text-gray-900" />
+                      </button>
+                      <button className="focus:outline-none">
+                        <Share2 className="h-6 w-6 text-gray-900" />
+                      </button>
+                      <div className="flex-1" />
+                      <button className="focus:outline-none">
+                        <Bookmark className="h-6 w-6 text-gray-900" />
+                      </button>
+                    </div>
+                    <div>
+                      <span
+                        className="font-bold text-gray-900 text-sm cursor-pointer hover:underline"
+                        onClick={() => {
+                          setSelectedReactors(Array.isArray(memory.likes) ? memory.likes.map((like: any) => like.user) : [])
+                          setReactorsOpen(memory.id)
+                        }}
+                      >
+                        {Array.isArray(memory.likes) ? memory.likes.length : memory.likes} likes
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -757,6 +521,50 @@ export default function MemoryApp() {
           )}
         </div>
       </main>
+      {reactorsOpen && (
+        <Dialog open={!!reactorsOpen} onOpenChange={() => setReactorsOpen(null)}>
+          <DialogContent className="max-w-xs relative">
+            <button
+              className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 focus:outline-none"
+              onClick={() => setReactorsOpen(null)}
+              aria-label="Close"
+              type="button"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <DialogHeader>
+              <DialogTitle>Reactions</DialogTitle>
+            </DialogHeader>
+            <div className="divide-y divide-gray-200">
+              {selectedReactors.length === 0 ? (
+                <div className="text-gray-500 text-center py-4">No reactions yet.</div>
+              ) : (
+                selectedReactors.map((user, idx) => (
+                  <div key={user.id || idx} className="flex items-center gap-3 py-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={user.image || "/default-profile.jpg"} />
+                      <AvatarFallback>{user.name?.[0] || "?"}</AvatarFallback>
+                    </Avatar>
+                    <span className="font-medium text-gray-900">{user.name}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+      <Dialog open={deleteConfirm.open} onOpenChange={open => setDeleteConfirm(d => ({ ...d, open }))}>
+        <DialogContent className="max-w-xs">
+          <DialogHeader>
+            <DialogTitle>Delete Memory</DialogTitle>
+          </DialogHeader>
+          <div className="py-2 text-gray-700">Are you sure you want to delete this memory? This action cannot be undone.</div>
+          <div className="flex gap-2 mt-4">
+            <Button className="w-full bg-gray-200 text-gray-700" onClick={() => setDeleteConfirm({ id: null, open: false })}>Cancel</Button>
+            <Button className="w-full bg-red-600 hover:bg-red-700 text-white" onClick={() => { if (deleteConfirm.id) performDelete(deleteConfirm.id) }}>Delete</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 } 

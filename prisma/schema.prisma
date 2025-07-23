@@ -75,7 +75,7 @@ model Memory {
 model FriendTag {
   id       String  @id @default(cuid())
   name     String
-  memory   Memory  @relation(fields: [memoryId], references: [id])
+  memory   Memory  @relation(fields: [memoryId], references: [id], onDelete: Cascade)
   memoryId String
 }
 
@@ -83,9 +83,8 @@ model Like {
   id        String   @id @default(cuid())
   user      User     @relation(fields: [userId], references: [id])
   userId    String
-  memory    Memory   @relation(fields: [memoryId], references: [id])
+  memory    Memory   @relation(fields: [memoryId], references: [id], onDelete: Cascade)
   memoryId  String
-  type      String   @default("like") // 'like', 'heart', 'haha', 'care', 'wow', 'sad', 'angry'
   createdAt DateTime @default(now())
 
   @@unique([userId, memoryId])
@@ -96,7 +95,7 @@ model Comment {
   text      String
   user      User     @relation(fields: [userId], references: [id])
   userId    String
-  memory    Memory   @relation(fields: [memoryId], references: [id])
+  memory    Memory   @relation(fields: [memoryId], references: [id], onDelete: Cascade)
   memoryId  String
   createdAt DateTime @default(now())
 }

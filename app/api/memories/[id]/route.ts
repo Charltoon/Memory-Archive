@@ -10,7 +10,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     where: { id: params.id },
     include: {
       author: true,
-      likes: true,
+      likes: { include: { user: { select: { id: true, name: true, image: true } } } },
       comments: true,
       friends: true,
     },
@@ -56,10 +56,6 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
-  // Delete related records first to avoid foreign key constraint errors
-  await prisma.friendTag.deleteMany({ where: { memoryId: params.id } })
-  await prisma.like.deleteMany({ where: { memoryId: params.id } })
-  await prisma.comment.deleteMany({ where: { memoryId: params.id } })
   await prisma.memory.delete({ where: { id: params.id, authorId: userId } })
   return NextResponse.json({ success: true })
 } 
