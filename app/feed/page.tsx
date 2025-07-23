@@ -35,6 +35,19 @@ interface Memory {
   liked: boolean
 }
 
+// Add Cloudinary config at the top
+const CLOUDINARY_URL = 'https://api.cloudinary.com/v1_1/da2v8v1eh/image/upload'; // Replace with your actual cloud name
+const CLOUDINARY_PRESET = 'unsigned_preset';
+
+async function uploadToCloudinary(file: File) {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('upload_preset', CLOUDINARY_PRESET);
+  const res = await fetch(CLOUDINARY_URL, { method: 'POST', body: formData });
+  const data = await res.json();
+  return data.secure_url;
+}
+
 export default function MemoryApp() {
   const { data: session, status } = useSession()
   useEffect(() => {
@@ -53,6 +66,7 @@ export default function MemoryApp() {
     location: "",
     category: "Adventure",
     friends: "",
+    image: "",
   })
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -88,41 +102,39 @@ export default function MemoryApp() {
     fetchMemories()
   }, [])
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
+  // Update handleFileSelect to upload to Cloudinary
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
     if (file) {
       // Validate file type
       if (!file.type.startsWith("image/")) {
-        alert("Please select an image file")
-        return
+        alert("Please select an image file");
+        return;
       }
-
       // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
-        alert("File size must be less than 5MB")
-        return
+        alert("File size must be less than 5MB");
+        return;
       }
-
-      setSelectedFile(file)
-
-      // Create preview URL
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        setImagePreview(e.target?.result as string)
-      }
-      reader.readAsDataURL(file)
+      // Upload to Cloudinary
+      setImagePreview(null); // Optionally show a loading spinner
+      const imageUrl = await uploadToCloudinary(file);
+      setImagePreview(imageUrl);
+      setNewMemory((prev) => ({ ...prev, image: imageUrl }));
+      setSelectedFile(null);
     }
-  }
+  };
 
   const resetFileInput = () => {
     setSelectedFile(null)
     setImagePreview(null)
   }
 
+  // In handleAddMemory, use newMemory.image (Cloudinary URL)
   const handleAddMemory = async () => {
     if (!newMemory.title.trim()) {
-      alert("Please enter a title for your memory")
-      return
+      alert("Please enter a title for your memory");
+      return;
     }
     try {
       const res = await fetch("/api/memories", {
@@ -131,7 +143,7 @@ export default function MemoryApp() {
         body: JSON.stringify({
           title: newMemory.title,
           description: newMemory.description,
-          image: imagePreview || "/default-post.jpg",
+          image: newMemory.image || "/default-post.jpg",
           date: new Date().toISOString(),
           location: newMemory.location,
           category: newMemory.category,
@@ -140,17 +152,17 @@ export default function MemoryApp() {
             .map((f) => f.trim())
             .filter((f) => f),
         }),
-      })
-      if (!res.ok) throw new Error("Failed to add memory")
-      const memory = await res.json()
-      setMemories((prev) => [memory, ...prev])
-      setNewMemory({ title: "", description: "", location: "", category: "Adventure", friends: "" })
-      resetFileInput()
-      setIsAddingMemory(false)
+      });
+      if (!res.ok) throw new Error("Failed to add memory");
+      const memory = await res.json();
+      setMemories((prev) => [memory, ...prev]);
+      setNewMemory({ title: "", description: "", location: "", category: "Adventure", friends: "", image: "" });
+      resetFileInput();
+      setIsAddingMemory(false);
     } catch (e: any) {
-      alert(e.message)
+      alert(e.message);
     }
-  }
+  };
 
   const handleLike = async (id: string) => {
     try {
@@ -424,7 +436,7 @@ export default function MemoryApp() {
                   className="w-full bg-gray-200 text-gray-700"
                   onClick={() => {
                     setIsAddingMemory(false);
-                    setNewMemory({ title: "", description: "", location: "", category: "Adventure", friends: "" });
+                    setNewMemory({ title: "", description: "", location: "", category: "Adventure", friends: "", image: "" });
                     resetFileInput();
                   }}
                 >
@@ -485,9 +497,9 @@ export default function MemoryApp() {
                           </div>
                         )}
                       </div>
-                    )}
-                  </div>
-                </div>
+                        )}
+                      </div>
+                    </div>
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-gray-500">
                   <div className="flex items-center gap-1">
                     <Calendar className="h-3 w-3" />

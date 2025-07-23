@@ -33,9 +33,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   }
   const data = await req.json()
   const createData: any = {
-    text: data.text,
-    userId,
-    memoryId: params.id,
+      text: data.text,
+      userId,
+      memoryId: params.id,
   }
   if (data.parentId) createData.parentId = data.parentId
   const comment = await prisma.comment.create({
