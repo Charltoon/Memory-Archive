@@ -12,13 +12,14 @@ export async function GET(req: NextRequest) {
     include: {
       author: true,
       likes: { include: { user: { select: { id: true, name: true, image: true } } } },
-      comments: true,
       friends: true,
+      _count: { select: { comments: true } },
     },
     orderBy: { createdAt: "desc" },
   })
   const memoriesWithLiked = memories.map(memory => ({
     ...memory,
+    comments: memory._count.comments, // use the count for comments
     liked: userId ? memory.likes.some((like: any) => like.userId === userId) : false
   }))
   return NextResponse.json(memoriesWithLiked)

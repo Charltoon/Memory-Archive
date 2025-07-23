@@ -83,6 +83,10 @@ export default function MemoryApp() {
   const [commentInput, setCommentInput] = useState("")
   const [commentLoading, setCommentLoading] = useState(false)
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null)
+  // Add state for editing and deleting comments
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
+  const [editingCommentText, setEditingCommentText] = useState("")
+  const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null)
 
   // Fetch memories from API
   useEffect(() => {
@@ -221,9 +225,13 @@ export default function MemoryApp() {
         body: JSON.stringify({ text: commentInput })
       })
       if (!res.ok) throw new Error("Failed to post comment")
-      const newComment = await res.json()
-      setComments((prev) => [...prev, newComment])
+      await res.json()
       setCommentInput("")
+      // Fetch latest comments and update state and count
+      const commentsRes = await fetch(`/api/memories/${commentModal.id}/comment`)
+      const latestComments = commentsRes.ok ? await commentsRes.json() : []
+      setComments(latestComments)
+      setMemories((prev) => prev.map(m => m.id === commentModal.id ? { ...m, comments: latestComments.length } : m))
     } catch (e: any) {
       // Optionally show error
     } finally {
@@ -547,8 +555,13 @@ export default function MemoryApp() {
                           <Heart className="h-6 w-6 text-gray-900 stroke-2" />
                         )}
                       </button>
-                      <button className="focus:outline-none" onClick={() => openCommentModal(memory.id)}>
+                      <button className="focus:outline-none flex items-center gap-1" onClick={() => openCommentModal(memory.id)}>
                         <MessageCircle className="h-6 w-6 text-gray-900" />
+                        {memory.comments > 0 ? (
+                          <span className="text-xs font-semibold text-gray-700">{memory.comments}</span>
+                        ) : (
+                          <span className="text-xs text-gray-400">No comments</span>
+                        )}
                       </button>
                       <button className="focus:outline-none">
                         <Share2 className="h-6 w-6 text-gray-900" />
@@ -683,9 +696,43 @@ export default function MemoryApp() {
                         <AvatarImage src={c.user?.image || "/default-profile.jpg"} />
                         <AvatarFallback>{c.user?.name?.[0] || "?"}</AvatarFallback>
                       </Avatar>
-                      <div>
-                        <div className="font-medium text-gray-900 text-sm">{c.user?.name || "Unknown"}</div>
-                        <div className="text-gray-700 text-sm">{c.text}</div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <div className="font-medium text-gray-900 text-sm">{c.user?.name || "Unknown"}</div>
+                          {/* Edit/Delete buttons for own comment */}
+                          {(session?.user && (session.user as any).id === c.user?.id) && (
+                            <>
+                              <button className="text-xs text-blue-600 hover:underline ml-2" onClick={() => { setEditingCommentId(c.id); setEditingCommentText(c.text); }}>Edit</button>
+                              <button className="text-xs text-red-600 hover:underline ml-1" onClick={() => setDeletingCommentId(c.id)}>Delete</button>
+                            </>
+                          )}
+                        </div>
+                        {editingCommentId === c.id ? (
+                          <div className="flex items-center gap-2 mt-1">
+                            <Input
+                              value={editingCommentText}
+                              onChange={e => setEditingCommentText(e.target.value)}
+                              className="text-sm"
+                              autoFocus
+                            />
+                            <Button className="px-2 py-1 text-xs h-auto" onClick={async () => {
+                              await fetch(`/api/memories/${commentModal.id}/comment`, {
+                                method: "PATCH",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ commentId: c.id, text: editingCommentText })
+                              })
+                              // Refresh comments
+                              const commentsRes = await fetch(`/api/memories/${commentModal.id}/comment`)
+                              const latestComments = commentsRes.ok ? await commentsRes.json() : []
+                              setComments(latestComments)
+                              setMemories((prev) => prev.map(m => m.id === commentModal.id ? { ...m, comments: latestComments.length } : m))
+                              setEditingCommentId(null)
+                            }}>Save</Button>
+                            <Button className="px-2 py-1 text-xs h-auto border border-gray-300 bg-white text-gray-700" onClick={() => setEditingCommentId(null)}>Cancel</Button>
+                          </div>
+                        ) : (
+                          <div className="text-gray-700 text-sm mt-1">{c.text}</div>
+                        )}
                         <div className="text-xs text-gray-400">{new Date(c.createdAt).toLocaleString()}</div>
                       </div>
                     </div>
@@ -761,6 +808,32 @@ export default function MemoryApp() {
             <button className="absolute top-4 right-4 text-white text-2xl z-10" onClick={() => setFullscreenImage(null)}>&times;</button>
             <div className="w-full h-full flex items-center justify-center">
               <Image src={fullscreenImage} alt="Full Screen" width={900} height={600} className="object-contain max-h-[80vh] max-w-full rounded-lg shadow-xl" />
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+      {deletingCommentId && (
+        <Dialog open={!!deletingCommentId} onOpenChange={() => setDeletingCommentId(null)}>
+          <DialogContent className="max-w-xs">
+            <DialogHeader>
+              <DialogTitle>Delete Comment</DialogTitle>
+            </DialogHeader>
+            <div className="py-2 text-gray-700">Are you sure you want to delete this comment? This action cannot be undone.</div>
+            <div className="flex gap-2 mt-4">
+              <Button className="w-full bg-gray-200 text-gray-700" onClick={() => setDeletingCommentId(null)}>Cancel</Button>
+              <Button className="w-full bg-red-600 hover:bg-red-700 text-white" onClick={async () => {
+                await fetch(`/api/memories/${commentModal.id}/comment`, {
+                  method: "DELETE",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ commentId: deletingCommentId })
+                })
+                // Refresh comments
+                const commentsRes = await fetch(`/api/memories/${commentModal.id}/comment`)
+                const latestComments = commentsRes.ok ? await commentsRes.json() : []
+                setComments(latestComments)
+                setMemories((prev) => prev.map(m => m.id === commentModal.id ? { ...m, comments: latestComments.length } : m))
+                setDeletingCommentId(null)
+              }}>Delete</Button>
             </div>
           </DialogContent>
         </Dialog>

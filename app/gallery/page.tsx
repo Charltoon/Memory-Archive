@@ -20,6 +20,7 @@ import {
   Sparkles,
   Clock,
   TrendingUp,
+  MessageCircle,
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -386,6 +387,10 @@ export default function MemoryGallery() {
                           <Users className="h-3 w-3" />
                           <span>{memory.friends.length}</span>
                         </div>
+                        <div className="flex items-center space-x-1">
+                          <MessageCircle className="h-3 w-3" />
+                          {memory.comments > 0 ? <span>{memory.comments}</span> : <span className="text-gray-400">No comments</span>}
+                        </div>
                       </div>
                     </div>
                   </CardContent>
@@ -490,6 +495,10 @@ export default function MemoryGallery() {
                           <div className="flex items-center space-x-1">
                             <MapPin className="h-3 w-3" />
                             <span className="truncate max-w-20">{memory.location}</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <MessageCircle className="h-3 w-3" />
+                            {memory.comments > 0 ? <span>{memory.comments}</span> : <span className="text-gray-400">No comments</span>}
                           </div>
                         </div>
                       </div>
