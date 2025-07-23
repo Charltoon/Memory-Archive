@@ -87,6 +87,8 @@ export default function MemoryApp() {
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
   const [editingCommentText, setEditingCommentText] = useState("")
   const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null)
+  // Add state for which comment's menu is open
+  const [commentMenuOpen, setCommentMenuOpen] = useState<string | null>(null)
 
   // Fetch memories from API
   useEffect(() => {
@@ -691,7 +693,7 @@ export default function MemoryApp() {
                   <div className="text-center text-gray-500 py-4">No comments yet.</div>
                 ) : (
                   comments.map((c, idx) => (
-                    <div key={c.id || idx} className="flex items-start gap-3">
+                    <div key={c.id || idx} className="flex items-start gap-3 relative">
                       <Avatar className="h-7 w-7">
                         <AvatarImage src={c.user?.image || "/default-profile.jpg"} />
                         <AvatarFallback>{c.user?.name?.[0] || "?"}</AvatarFallback>
@@ -699,12 +701,19 @@ export default function MemoryApp() {
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <div className="font-medium text-gray-900 text-sm">{c.user?.name || "Unknown"}</div>
-                          {/* Edit/Delete buttons for own comment */}
+                          {/* Kebab menu for own comment */}
                           {(session?.user && (session.user as any).id === c.user?.id) && (
-                            <>
-                              <button className="text-xs text-blue-600 hover:underline ml-2" onClick={() => { setEditingCommentId(c.id); setEditingCommentText(c.text); }}>Edit</button>
-                              <button className="text-xs text-red-600 hover:underline ml-1" onClick={() => setDeletingCommentId(c.id)}>Delete</button>
-                            </>
+                            <div className="relative">
+                              <button className="p-1 rounded-full hover:bg-gray-200" onClick={() => setCommentMenuOpen(commentMenuOpen === c.id ? null : c.id)}>
+                                <MoreVertical className="h-4 w-4" />
+                              </button>
+                              {commentMenuOpen === c.id && (
+                                <div className="absolute right-0 mt-2 w-24 bg-white border rounded shadow z-10">
+                                  <button className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100" onClick={() => { setEditingCommentId(c.id); setEditingCommentText(c.text); setCommentMenuOpen(null); }}>Edit</button>
+                                  <button className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100" onClick={() => { setDeletingCommentId(c.id); setCommentMenuOpen(null); }}>Delete</button>
+                                </div>
+                              )}
+                            </div>
                           )}
                         </div>
                         {editingCommentId === c.id ? (
