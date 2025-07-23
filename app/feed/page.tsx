@@ -15,6 +15,7 @@ import { Heart, MessageCircle, Share2, Plus, Camera, MapPin, Calendar, Users, Gr
 import Image from "next/image"
 import Link from "next/link"
 import { signOut, useSession } from "next-auth/react"
+import clsx from "clsx"
 
 interface Memory {
   id: string
@@ -62,6 +63,11 @@ export default function MemoryApp() {
   const [selectedReactors, setSelectedReactors] = useState<any[]>([])
   // Add state for delete confirmation
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string | null, open: boolean }>({ id: null, open: false })
+  // Add state for comment modal
+  const [commentModal, setCommentModal] = useState<{ id: string | null, open: boolean }>({ id: null, open: false })
+  const [comments, setComments] = useState<any[]>([])
+  const [commentInput, setCommentInput] = useState("")
+  const [commentLoading, setCommentLoading] = useState(false)
 
   // Fetch memories from API
   useEffect(() => {
@@ -172,6 +178,43 @@ export default function MemoryApp() {
       setDeleteConfirm({ id: null, open: false })
     } catch (e: any) {
       alert(e.message)
+    }
+  }
+
+  // Function to open comment modal and fetch comments
+  const openCommentModal = async (id: string) => {
+    setCommentModal({ id, open: true })
+    setCommentLoading(true)
+    try {
+      const res = await fetch(`/api/memories/${id}/comment`)
+      if (!res.ok) throw new Error("Failed to fetch comments")
+      const data = await res.json()
+      setComments(data)
+    } catch (e: any) {
+      setComments([])
+    } finally {
+      setCommentLoading(false)
+    }
+  }
+
+  // Function to post a comment
+  const postComment = async () => {
+    if (!commentInput.trim() || !commentModal.id) return
+    setCommentLoading(true)
+    try {
+      const res = await fetch(`/api/memories/${commentModal.id}/comment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: commentInput })
+      })
+      if (!res.ok) throw new Error("Failed to post comment")
+      const newComment = await res.json()
+      setComments((prev) => [...prev, newComment])
+      setCommentInput("")
+    } catch (e: any) {
+      // Optionally show error
+    } finally {
+      setCommentLoading(false)
     }
   }
 
@@ -491,7 +534,7 @@ export default function MemoryApp() {
                           <Heart className="h-6 w-6 text-gray-900 stroke-2" />
                         )}
                       </button>
-                      <button className="focus:outline-none">
+                      <button className="focus:outline-none" onClick={() => openCommentModal(memory.id)}>
                         <MessageCircle className="h-6 w-6 text-gray-900" />
                       </button>
                       <button className="focus:outline-none">
@@ -562,6 +605,140 @@ export default function MemoryApp() {
           <div className="flex gap-2 mt-4">
             <Button className="w-full bg-gray-200 text-gray-700" onClick={() => setDeleteConfirm({ id: null, open: false })}>Cancel</Button>
             <Button className="w-full bg-red-600 hover:bg-red-700 text-white" onClick={() => { if (deleteConfirm.id) performDelete(deleteConfirm.id) }}>Delete</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={commentModal.open} onOpenChange={open => setCommentModal(d => ({ ...d, open }))}>
+        <DialogContent
+          className={clsx(
+            "p-0 border-none bg-transparent shadow-none fixed inset-0 z-50 flex justify-center items-center",
+            "min-h-screen min-w-full"
+          )}
+          style={{ background: "rgba(0,0,0,0.3)" }}
+        >
+          {/* Desktop/tablet: true two-column layout, centered */}
+          <div className="hidden md:flex w-full max-w-3xl h-[70vh] bg-white rounded-lg overflow-hidden shadow-lg mx-auto my-auto">
+            {/* Left: Post Image */}
+            <div className="w-1/2 h-full bg-black flex items-center justify-center">
+              {(() => {
+                const memory = memories.find(m => m.id === commentModal.id)
+                if (!memory) return null
+                return (
+                  <Image src={memory.image || "/default-post.jpg"} alt={memory.title} width={600} height={600} className="object-contain max-h-full max-w-full" />
+                )
+              })()}
+            </div>
+            {/* Right: Comments/Meta */}
+            <div className="w-1/2 h-full flex flex-col bg-white">
+              <div className="flex items-center justify-between px-4 pt-4 pb-2 border-b">
+                <DialogTitle className="text-lg font-bold">Comments</DialogTitle>
+                <button
+                  className="text-gray-400 hover:text-gray-600 focus:outline-none"
+                  onClick={() => setCommentModal({ id: null, open: false })}
+                  aria-label="Close"
+                  type="button"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              {/* Post meta/caption at the top */}
+              {(() => {
+                const memory = memories.find(m => m.id === commentModal.id)
+                if (!memory) return null
+                return (
+                  <div className="flex items-center gap-2 px-4 py-3 border-b">
+                    <Avatar className="h-7 w-7">
+                      <AvatarImage src={memory.author.avatar || "/default-profile.jpg"} />
+                      <AvatarFallback>{memory.author.name[0]}</AvatarFallback>
+                    </Avatar>
+                    <span className="font-semibold text-base truncate">{memory.author.name}</span>
+                    <span className="text-xs text-gray-400 ml-2">{new Date(memory.date).toLocaleDateString()}</span>
+                    <Badge className={getCategoryColor(memory.category)}>{memory.category}</Badge>
+                  </div>
+                )
+              })()}
+              {/* Comments */}
+              <div className="flex-1 overflow-y-auto px-4 py-2 space-y-3">
+                {commentLoading ? (
+                  <div className="text-center text-gray-500 py-4">Loading...</div>
+                ) : comments.length === 0 ? (
+                  <div className="text-center text-gray-500 py-4">No comments yet.</div>
+                ) : (
+                  comments.map((c, idx) => (
+                    <div key={c.id || idx} className="flex items-start gap-3">
+                      <Avatar className="h-7 w-7">
+                        <AvatarImage src={c.user?.image || "/default-profile.jpg"} />
+                        <AvatarFallback>{c.user?.name?.[0] || "?"}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <div className="font-medium text-gray-900 text-sm">{c.user?.name || "Unknown"}</div>
+                        <div className="text-gray-700 text-sm">{c.text}</div>
+                        <div className="text-xs text-gray-400">{new Date(c.createdAt).toLocaleString()}</div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+              <div className="border-t bg-white px-4 py-3 flex gap-2 sticky bottom-0">
+                <Input
+                  value={commentInput}
+                  onChange={e => setCommentInput(e.target.value)}
+                  placeholder="Add a comment..."
+                  className="flex-1"
+                  onKeyDown={e => { if (e.key === "Enter") postComment() }}
+                />
+                <Button onClick={postComment} disabled={commentLoading || !commentInput.trim()}>
+                  Post
+                </Button>
+              </div>
+            </div>
+          </div>
+          {/* Mobile: bottom sheet */}
+          <div className="md:hidden w-full max-w-sm bg-white rounded-t-lg flex flex-col max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between px-4 pt-4 pb-2 border-b">
+              <DialogTitle className="text-lg font-bold">Comments</DialogTitle>
+              <button
+                className="text-gray-400 hover:text-gray-600 focus:outline-none"
+                onClick={() => setCommentModal({ id: null, open: false })}
+                aria-label="Close"
+                type="button"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-4 py-2 space-y-3">
+              {commentLoading ? (
+                <div className="text-center text-gray-500 py-4">Loading...</div>
+              ) : comments.length === 0 ? (
+                <div className="text-center text-gray-500 py-4">No comments yet.</div>
+              ) : (
+                comments.map((c, idx) => (
+                  <div key={c.id || idx} className="flex items-start gap-3">
+                    <Avatar className="h-7 w-7">
+                      <AvatarImage src={c.user?.image || "/default-profile.jpg"} />
+                      <AvatarFallback>{c.user?.name?.[0] || "?"}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="font-medium text-gray-900 text-sm">{c.user?.name || "Unknown"}</div>
+                      <div className="text-gray-700 text-sm">{c.text}</div>
+                      <div className="text-xs text-gray-400">{new Date(c.createdAt).toLocaleString()}</div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            <div className="border-t bg-white px-4 py-3 flex gap-2 sticky bottom-0">
+              <Input
+                value={commentInput}
+                onChange={e => setCommentInput(e.target.value)}
+                placeholder="Add a comment..."
+                className="flex-1"
+                onKeyDown={e => { if (e.key === "Enter") postComment() }}
+              />
+              <Button onClick={postComment} disabled={commentLoading || !commentInput.trim()}>
+                Post
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
