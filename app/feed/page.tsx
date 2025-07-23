@@ -82,6 +82,7 @@ export default function MemoryApp() {
   const [comments, setComments] = useState<any[]>([])
   const [commentInput, setCommentInput] = useState("")
   const [commentLoading, setCommentLoading] = useState(false)
+  const [fullscreenImage, setFullscreenImage] = useState<string | null>(null)
 
   // Fetch memories from API
   useEffect(() => {
@@ -524,7 +525,7 @@ export default function MemoryApp() {
                   </div>
 
                   <div className="relative aspect-video rounded-lg overflow-hidden">
-                    <Image src={memory.image || "/default-post.jpg"} alt={memory.title} fill className="object-cover" />
+                    <Image src={memory.image || "/default-post.jpg"} alt={memory.title} fill className="object-cover cursor-pointer" onClick={() => setFullscreenImage(memory.image || "/default-post.jpg")}/>
                   </div>
 
                   {memory.friends && memory.friends.length > 0 && (
@@ -754,6 +755,16 @@ export default function MemoryApp() {
           </div>
         </DialogContent>
       </Dialog>
+      {fullscreenImage && (
+        <Dialog open={!!fullscreenImage} onOpenChange={() => setFullscreenImage(null)}>
+          <DialogContent className="flex flex-col items-center justify-center bg-transparent shadow-none max-w-3xl w-full p-0">
+            <button className="absolute top-4 right-4 text-white text-2xl z-10" onClick={() => setFullscreenImage(null)}>&times;</button>
+            <div className="w-full h-full flex items-center justify-center">
+              <Image src={fullscreenImage} alt="Full Screen" width={900} height={600} className="object-contain max-h-[80vh] max-w-full rounded-lg shadow-xl" />
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
 } 

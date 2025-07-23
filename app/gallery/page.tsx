@@ -25,6 +25,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { useSession } from "next-auth/react"
 import { useEffect } from "react"
+import { Dialog, DialogContent } from "@/components/ui/dialog"
 
 interface Memory {
   id: string
@@ -137,6 +138,7 @@ export default function MemoryGallery() {
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [sortBy, setSortBy] = useState("date")
   const [viewMode, setViewMode] = useState("grid")
+  const [fullscreenImage, setFullscreenImage] = useState<string | null>(null)
 
   const filteredAndSortedMemories = useMemo(() => {
     const filtered = sampleMemories.filter((memory) => {
@@ -346,7 +348,7 @@ export default function MemoryGallery() {
                   key={memory.id}
                   className="group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 bg-white/80 backdrop-blur-sm border-0 overflow-hidden"
                 >
-                  <div className="relative aspect-square overflow-hidden">
+                  <div className="relative aspect-square overflow-hidden cursor-pointer" onClick={() => setFullscreenImage(memory.image || "/placeholder.svg")}>
                     <Image
                       src={memory.image || "/placeholder.svg"}
                       alt={memory.title}
@@ -411,7 +413,7 @@ export default function MemoryGallery() {
                       >
                         <CardContent className="p-4">
                           <div className="flex space-x-4">
-                            <div className="relative w-20 h-20 rounded-lg overflow-hidden flex-shrink-0">
+                            <div className="relative w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 cursor-pointer" onClick={() => setFullscreenImage(memory.image || "/placeholder.svg")}>
                               <Image
                                 src={memory.image || "/placeholder.svg"}
                                 alt={memory.title}
@@ -458,7 +460,7 @@ export default function MemoryGallery() {
                     index % 3 === 0 ? "transform rotate-1" : index % 3 === 1 ? "transform -rotate-1" : ""
                   }`}
                 >
-                  <div className="relative aspect-[4/5] overflow-hidden">
+                  <div className="relative aspect-[4/5] overflow-hidden cursor-pointer" onClick={() => setFullscreenImage(memory.image || "/placeholder.svg")}>
                     <Image
                       src={memory.image || "/placeholder.svg"}
                       alt={memory.title}
@@ -507,6 +509,16 @@ export default function MemoryGallery() {
           </div>
         )}
       </section>
+      {fullscreenImage && (
+        <Dialog open={!!fullscreenImage} onOpenChange={() => setFullscreenImage(null)}>
+          <DialogContent className="flex flex-col items-center justify-center bg-transparent shadow-none max-w-3xl w-full p-0">
+            <button className="absolute top-4 right-4 text-white text-2xl z-10" onClick={() => setFullscreenImage(null)}>&times;</button>
+            <div className="w-full h-full flex items-center justify-center">
+              <Image src={fullscreenImage} alt="Full Screen" width={900} height={600} className="object-contain max-h-[80vh] max-w-full rounded-lg shadow-xl" />
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
 }
