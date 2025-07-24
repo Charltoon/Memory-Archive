@@ -737,7 +737,7 @@ export default function MemoryApp() {
                               setMemories((prev) => prev.map(m => m.id === commentModal.id ? { ...m, comments: latestComments.length } : m))
                               setEditingCommentId(null)
                             }}>Save</Button>
-                            <Button className="px-2 py-1 text-xs h-auto border border-gray-300 bg-white text-gray-700" onClick={() => setEditingCommentId(null)}>Cancel</Button>
+                            <Button className="px-2 py-1 text-xs h-auto border border-gray-300 bg-gray-100 text-black hover:bg-gray-200 active:bg-blue-600 active:text-white transition-colors" onClick={() => setEditingCommentId(null)}>Cancel</Button>
                           </div>
                         ) : (
                           <div className="text-gray-700 text-sm mt-1">{c.text}</div>
@@ -782,14 +782,55 @@ export default function MemoryApp() {
                 <div className="text-center text-gray-500 py-4">No comments yet.</div>
               ) : (
                 comments.map((c, idx) => (
-                  <div key={c.id || idx} className="flex items-start gap-3">
+                  <div key={c.id || idx} className="flex items-start gap-3 relative">
                     <Avatar className="h-7 w-7">
                       <AvatarImage src={c.user?.image || "/default-profile.jpg"} />
                       <AvatarFallback>{c.user?.name?.[0] || "?"}</AvatarFallback>
                     </Avatar>
-                    <div>
-                      <div className="font-medium text-gray-900 text-sm">{c.user?.name || "Unknown"}</div>
-                      <div className="text-gray-700 text-sm">{c.text}</div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <div className="font-medium text-gray-900 text-sm">{c.user?.name || "Unknown"}</div>
+                        {/* Kebab menu for own comment (MOBILE) */}
+                        {(session?.user && (session.user as any).id === c.user?.id) && (
+                          <div className="relative">
+                            <button className="p-1 rounded-full hover:bg-gray-200" onClick={() => setCommentMenuOpen(commentMenuOpen === c.id ? null : c.id)}>
+                              <MoreVertical className="h-4 w-4" />
+                            </button>
+                            {commentMenuOpen === c.id && (
+                              <div className="absolute right-0 mt-2 w-24 bg-white border rounded shadow z-10">
+                                <button className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100" onClick={() => { setEditingCommentId(c.id); setEditingCommentText(c.text); setCommentMenuOpen(null); }}>Edit</button>
+                                <button className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100" onClick={() => { setDeletingCommentId(c.id); setCommentMenuOpen(null); }}>Delete</button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      {editingCommentId === c.id ? (
+                        <div className="flex items-center gap-2 mt-1">
+                          <Input
+                            value={editingCommentText}
+                            onChange={e => setEditingCommentText(e.target.value)}
+                            className="text-sm"
+                            autoFocus
+                          />
+                          <Button className="px-2 py-1 text-xs h-auto" onClick={async () => {
+                            await fetch(`/api/memories/${commentModal.id}/comment`, {
+                              method: "PATCH",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ commentId: c.id, text: editingCommentText })
+                            })
+                            // Refresh comments
+                            const commentsRes = await fetch(`/api/memories/${commentModal.id}/comment`)
+                            const latestComments = commentsRes.ok ? await commentsRes.json() : []
+                            setComments(latestComments)
+                            setMemories((prev) => prev.map(m => m.id === commentModal.id ? { ...m, comments: latestComments.length } : m))
+                            setEditingCommentId(null)
+                          }}>Save</Button>
+                          <Button className="px-2 py-1 text-xs h-auto border border-gray-300 bg-black text-black hover:bg-gray-200 active:bg-blue-600 active:text-black transition-colors" onClick={() => setEditingCommentId(null)}>Cancel</Button>
+                        </div>
+                      ) : (
+                        <div className="text-gray-700 text-sm mt-1">{c.text}</div>
+                      )}
                       <div className="text-xs text-gray-400">{new Date(c.createdAt).toLocaleString()}</div>
                     </div>
                   </div>
