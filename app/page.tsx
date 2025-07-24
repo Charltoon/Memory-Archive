@@ -136,7 +136,7 @@ export default function LandingPage() {
             <span className="inline-flex items-center justify-center bg-blue-600 text-white rounded-full w-14 h-14 mr-3">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A2 2 0 0020 6.382V5a2 2 0 00-2-2H6a2 2 0 00-2 2v1.382a2 2 0 00.447 1.342L9 10m6 0v10m0 0H9m6 0a2 2 0 002-2v-8m-2 10a2 2 0 01-2-2H9a2 2 0 01-2-2v-8m0 0L4.447 7.724A2 2 0 014 6.382V5" /></svg>
             </span>
-            <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">Memories</h1>
+            <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">Memoriae</h1>
           </div>
           <p className="text-lg text-gray-700 mb-6">Capture, organize, and share your special moments with friends. Relive your adventures, celebrations, and everyday joys—all in one beautiful site.</p>
           <Button
@@ -268,14 +268,14 @@ export default function LandingPage() {
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2a2 2 0 012-2h2a2 2 0 012 2v2m-6 0a2 2 0 002 2h2a2 2 0 002-2m-6 0V7a2 2 0 012-2h2a2 2 0 012 2v10" /></svg>
             </span>
             <h3 className="font-bold text-lg mb-2">Organize by Category</h3>
-            <p className="text-gray-600">Sort your memories by adventure, celebration, travel, food, sports, and more.</p>
+            <p className="text-gray-600">Sort your memories by adventure, celebration, travel, food, pets, and more.</p>
           </div>
         </div>
       </main>
 
       {/* Footer */}
       <footer className="w-full py-6 text-center text-gray-500 text-sm bg-white/80 mt-auto">
-        &copy; {new Date().getFullYear()} Memories. All rights reserved.
+        &copy; {new Date().getFullYear()} Memoriae. tonton-dev.
       </footer>
     </div>
   )
