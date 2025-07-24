@@ -7,7 +7,7 @@ import SessionClientProvider from "@/components/SessionClientProvider"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Memories - Share Your Special Moments",
+  title: "Memoriae - Share Your Special Moments",
   description: "A beautiful app to capture and share memories with friends",
 }
 
