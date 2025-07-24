@@ -255,7 +255,8 @@ export default function MemoryApp() {
       Celebration: "bg-purple-100 text-purple-800",
       Travel: "bg-blue-100 text-blue-800",
       Food: "bg-orange-100 text-orange-800",
-      Sports: "bg-red-100 text-red-800",
+      
+      Pets: "bg-yellow-100 text-yellow-800",
     }
     return colors[category as keyof typeof colors] || "bg-gray-100 text-gray-800"
   }
@@ -417,16 +418,12 @@ export default function MemoryApp() {
                   value={newMemory.category}
                   onValueChange={(value: string) => setNewMemory({ ...newMemory, category: value })}
                 >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Adventure">Adventure</SelectItem>
-                    <SelectItem value="Celebration">Celebration</SelectItem>
-                    <SelectItem value="Travel">Travel</SelectItem>
-                    <SelectItem value="Food">Food</SelectItem>
-                    <SelectItem value="Sports">Sports</SelectItem>
-                  </SelectContent>
+                  <SelectItem value="Adventure">Adventure</SelectItem>
+                  <SelectItem value="Celebration">Celebration</SelectItem>
+                  <SelectItem value="Travel">Travel</SelectItem>
+                  <SelectItem value="Food">Food</SelectItem>
+                  
+                  <SelectItem value="Pets">Pets</SelectItem>
                 </Select>
               </div>
               <div>
