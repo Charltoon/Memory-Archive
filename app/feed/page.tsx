@@ -531,8 +531,32 @@ export default function MemoryApp() {
                     <p className="text-gray-700">{memory.description}</p>
                   </div>
 
-                  <div className="relative aspect-video rounded-lg overflow-hidden">
+                  <div className="relative aspect-video rounded-lg overflow-hidden flex items-center justify-center">
                     <Image src={memory.image || "/default-post.jpg"} alt={memory.title} fill className="object-cover cursor-pointer" onClick={() => setFullscreenImage(memory.image || "/default-post.jpg")}/>
+                    {memory.image && (
+                      <button
+                        type="button"
+                        onClick={async e => {
+                          e.stopPropagation();
+                          const response = await fetch(memory.image);
+                          const blob = await response.blob();
+                          const url = window.URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = memory.title ? `${memory.title}.jpg` : 'image.jpg';
+                          document.body.appendChild(a);
+                          a.click();
+                          a.remove();
+                          window.URL.revokeObjectURL(url);
+                        }}
+                        className="absolute bottom-2 right-2 bg-white bg-opacity-80 rounded-full p-3 shadow hover:bg-opacity-100 transition focus:outline-none active:scale-95"
+                        title="Download image"
+                        style={{ minWidth: 44, minHeight: 44 }}
+                        aria-label="Download image"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-800" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4" /></svg>
+                      </button>
+                    )}
                   </div>
 
                   {memory.friends && memory.friends.length > 0 && (
